@@ -15,7 +15,7 @@ function quotientPosteriors(priorDistribution, likelihoodDistribution, currentPa
 	return (priorDistribution.pdf(newParam) * likelihoodNew) / (priorDistribution.pdf(currentParam) * likelihoodCurrent);
 }
 
-function MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, iterations, successes, hist, progressive, plotToUpdate)
+function MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(priorDistribution, likelihoodDistribution, iterations, successes, hist, progressive, plotToUpdate)
 {
 	let uniformGenerator = uniformGen.factory(0.0, 1.0);
 
@@ -66,8 +66,6 @@ function MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, it
 	//allAcceptedParams = allAcceptedParams.filter((val, index, arr) => index > arr.length * burnProportion);
 }
 
-
-
 function updatePlot(plot, hist)
 {
 	plot.x = [plot.x[0], plot.x[1], hist.map(([x, ]) => x)];
@@ -86,19 +84,17 @@ function updatePlot(plot, hist)
 	let alphaPrior = 12;
 	let betaPrior  = 12;
 
+	/*let n = 18198;
+	let successes = n - 8;
+	let alphaPrior = 0.700102;
+	let betaPrior  = 1;*/
+
 	//Parameter values for analytic posterior
 	let alphaPost = successes + alphaPrior;
 	let betaPost = n - successes + betaPrior;
 
-	//Define our prior believe giving the prior distribution density function (pdf)
-	let priorDistribution = new Beta(alphaPrior, betaPrior);
-	let likelihoodDistribution = new Binomial(n, 0.0);
-
-	//How many iterations of the Metropolis algorithm to carry out for MCMC
-	let iterations = 100000;
-
 	//Plot the analytic prior and posterior beta distributions
-	let X = TOOLS.generateArrayOfNumbers(0.0, 1.0, 1000);
+	let X = TOOLS.generateArrayOfNumbers(0.0, 1.0, 10000);
 	let plot = new Plot(
 		{
 			x : [X, X, []],
@@ -112,7 +108,7 @@ function updatePlot(plot, hist)
 			colors: ["blue", "green", "red"],
 			description: "The prior and posterior belief distributions about the fairness Theta.",
 			title: "The prior and posterior belief distributions about the fairness Theta.",
-			symbols: ['none', "none", "closed-circle"],
+			symbols: ["none", "none", "closed-circle"],
 			width: 1000,
 			height: 562,
 			xNumTicks: 10,
@@ -125,9 +121,15 @@ function updatePlot(plot, hist)
 	plot.render();
 	plot.view();
 
+
+	//Define our prior believe giving the prior distribution density function (pdf)
+	let priorDistribution = new Beta(alphaPrior, betaPrior);
+	let likelihoodDistribution = new Binomial(n, 0.0);
+	//How many iterations of the Metropolis algorithm to carry out for MCMC
+	let iterations = 100000;
 	let progressive = false;
 	let hist = [];
-	MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, iterations, successes, hist, progressive, plot);
+	MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(priorDistribution, likelihoodDistribution, iterations, successes, hist, progressive, plot);
 
 
 	//View the plot in browser
