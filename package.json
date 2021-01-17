@@ -5,6 +5,7 @@
   "main": "mcmc.js",
   "scripts": {
     "mcmc": "node -r esm mcmc.js",
+    "abTesting": "node -r esm abTesting.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

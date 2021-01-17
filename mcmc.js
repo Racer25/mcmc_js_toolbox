@@ -15,13 +15,14 @@ function quotientPosteriors(priorDistribution, likelihoodDistribution, currentPa
 	return (priorDistribution.pdf(newParam) * likelihoodNew) / (priorDistribution.pdf(currentParam) * likelihoodCurrent);
 }
 
-function MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, iterations, successes)
+function MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, iterations, successes, hist, progressive, plotToUpdate)
 {
 	let uniformGenerator = uniformGen.factory(0.0, 1.0);
 
 	let currentParam;
 	let newParam;
 	let allAcceptedParams = [];
+
 	for(let i = 0; i < iterations; i++)
 	{
 		//If first iteration, we generate currentParam
@@ -46,42 +47,34 @@ function MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, it
 				//Adopt new prob
 				currentParam = newParam;
 				allAcceptedParams.push(newParam);
+				if(progressive && allAcceptedParams.length % 100 === 0)
+				{
+					//Update data and plot
+					hist = TOOLS.createHistFromData(allAcceptedParams, false, "density");
+					updatePlot(plotToUpdate, hist);
+				}
 			}
 		}
 	}
 
+	//Update data and plot
+	hist = TOOLS.createHistFromData(allAcceptedParams, false,"density");
+	updatePlot(plotToUpdate, hist);
+
 	//Burn in
-	let burnProportion= 0.1;
-	allAcceptedParams = allAcceptedParams.filter((val, index, arr) => index > arr.length * burnProportion);
+	//let burnProportion= 0.1;
+	//allAcceptedParams = allAcceptedParams.filter((val, index, arr) => index > arr.length * burnProportion);
+}
 
-	//Use allAcceptedParams to generate histogram
-	//let numberOfPins = Math.floor(Math.sqrt(allAcceptedParams.length));
-	let numberOfPins = Math.ceil(Math.sqrt(allAcceptedParams.length));
-	let width = (1.0 - 0.0) / numberOfPins;
 
-	//Generate an array of arrays
-	let hist = [...Array(numberOfPins).keys()]
-	.map(index =>
-	{
-		let value = allAcceptedParams.filter(param =>
-		{
-			if(index === 0)
-			{
-				return param <= width && param > 0.0;
-			}
-			return (param > width * index) && (param <= width * (index + 1));
-		}).length / (allAcceptedParams.length * width);
-		return [width * ( 2 * index + 1) / 2, value];
-	});
 
-	/*let meanNumberOfPoints = hist.map(([x, val]) => val).reduce((a, b) => a + b) / hist.length;
+function updatePlot(plot, hist)
+{
+	plot.x = [plot.x[0], plot.x[1], hist.map(([x, ]) => x)];
+	plot.y = [plot.y[0], plot.y[1], hist.map(([, density]) => density)];
 
-	hist = hist.map(([x, value]) =>
-	{
-		return [x, value / meanNumberOfPoints];
-	});*/
-
-	return hist;
+	plot.render();
+	plot.view();
 }
 
 //Main function in mcmc.js
@@ -104,32 +97,40 @@ function MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, it
 	//How many iterations of the Metropolis algorithm to carry out for MCMC
 	let iterations = 100000;
 
-	let hist = MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, iterations, successes);
-
-
 	//Plot the analytic prior and posterior beta distributions
 	let X = TOOLS.generateArrayOfNumbers(0.0, 1.0, 1000);
 	let plot = new Plot(
 		{
-			x : [X, X, hist.map(([x, ]) => x)],
+			x : [X, X, []],
 			y : [X.map(x => (new Beta(alphaPrior, betaPrior)).pdf(x)),
 				X.map(x => (new Beta(alphaPost, betaPost)).pdf(x)),
-				hist.map(([, density]) => density)],
+				[]],
 			labels: ["Prior distribution", "Posterior distribution", "Estimated Posterior distribution"],
 			xLabel: "Theta (coin fairness)",
 			yLabel: "Density",
-			lineStyle: ["--", "-", ":"],
+			lineStyle: ["--", "-", "none"],
 			colors: ["blue", "green", "red"],
 			description: "The prior and posterior belief distributions about the fairness Theta.",
 			title: "The prior and posterior belief distributions about the fairness Theta.",
-			//symbols: ['closed-circle', "open-circle"],
+			symbols: ['none', "none", "closed-circle"],
 			width: 1000,
 			height: 562,
 			xNumTicks: 10,
-			yNumTicks: 10
+			yNumTicks: 10,
+			renderFormat: "vdom",
+			viewer: "browser",
+			autoRender: false,
+			autoView: false
 		});
+	plot.render();
+	plot.view();
+
+	let progressive = false;
+	let hist = [];
+	MCMC_POSTERIOR_ESTIMATION(priorDistribution, likelihoodDistribution, iterations, successes, hist, progressive, plot);
+
 
 	//View the plot in browser
-	plot.view("browser");
+	//plot.view("browser");
 
 })();
