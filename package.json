@@ -1,0 +1,17 @@
+{
+  "name": "mcmc_js_toolbox",
+  "version": "1.0.0",
+  "description": "",
+  "main": "mcmc.js",
+  "scripts": {
+    "mcmc": "node -r esm mcmc.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@stdlib/stdlib": "0.0.93",
+    "esm": "^3.2.25"
+  }
+}
