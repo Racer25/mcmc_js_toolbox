@@ -151,8 +151,18 @@ export function findMedianImprovement(cdfHist)
 	return cdfHist.map(([x, ])=> x)[indexNearestToMedian];
 }
 
-export function highestDensityBin(pdfHist)
+export function modeEstimation(pdfHist)
 {
 	let indexMax = pdfHist.map(([, value ])=> value).reduce((iMax, x, i, arr) => x > arr[iMax] ? i : iMax, 0);
 	return pdfHist.map(([x, ])=> x)[indexMax];
+}
+
+export function meanEstimation(pdfHist)
+{
+	let mean = pdfHist.reduce((acc, [x,  pX], i, arr) =>
+	{
+		acc += x * pX;
+		return acc;
+	}, 0.0);
+	return mean;
 }

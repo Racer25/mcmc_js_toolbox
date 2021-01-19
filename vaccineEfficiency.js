@@ -51,7 +51,7 @@ function efficacy(probCovVaccine, probCovPlacebo)
 	//Compute efficacy
 	let samplesEfficacy = samplesPlacebo.map((samplePlacebo, index) => efficacy(samplesVaccine[index], samplePlacebo));
 
-	let histPDF = TOOLS.createHistFromData(samplesEfficacy, false, "none");
+	let histPDF = TOOLS.createHistFromData(samplesEfficacy, false, "classic");
 
 	//View histogram 1
 	let plotPDF = new Plot(
@@ -130,8 +130,10 @@ function efficacy(probCovVaccine, probCovPlacebo)
 	let median = TOOLS.findMedianImprovement(histCDF);
 	console.log("Median", median);
 
-	let highestDensityBin = TOOLS.highestDensityBin(histPDF);
-	console.log("HDB", highestDensityBin);
+	let mode = TOOLS.modeEstimation(histPDF);
+	console.log("Mode", mode);
 
+	let mean = TOOLS.meanEstimation(histPDF);
+	console.log("Mean", mean);
 
 })();
