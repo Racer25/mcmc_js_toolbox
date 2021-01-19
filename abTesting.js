@@ -2,72 +2,15 @@ import betaGen from "@stdlib/random/base/beta";
 import * as TOOLS from "./tools";
 import Plot from "@stdlib/plot/ctor";
 
-function findNearestValueIndex(value, values)
-{
-	return values
-	.reduce((acc, curr, currIndex, arr) =>
-	{
-		if(Math.abs(curr - value) < Math.abs(arr[acc] - value))
-		{
-			acc = currIndex;
-		}
-		return acc;
-	}, 0);
-}
-
-function findConfidenceInterval(confidence, cdfHist)
-{
- 	let inferiorConfProbBound = (1.0 - confidence) / 2;
- 	let superiorConfProbBound = 1.0 - inferiorConfProbBound;
-
- 	//Find index of value which is closer to inferiorConfProbBound
-	let indexNearestToInferiorLimit = findNearestValueIndex(inferiorConfProbBound, cdfHist.map(([, value])=> value));
-
-	//Find index of value which is closer to superiorConfProbBound
-	let indexNearestToSuperiorLimit = findNearestValueIndex(superiorConfProbBound, cdfHist.map(([, value])=> value));
-
-	let inferiorVariableBound = cdfHist.map(([x, ])=> x)[indexNearestToInferiorLimit];
-	let superiorVariableBound = cdfHist.map(([x, ])=> x)[indexNearestToSuperiorLimit];
-
-	let confidenceInterval = {
-		confidence,
-		inferiorConfProbBound,
-		superiorConfProbBound,
-		inferiorVariableBound,
-		superiorVariableBound,
-	};
-	return confidenceInterval;
-}
-
-function findMedianImprovement(cdfHist)
-{
-	//Find index of value which is closer to inferiorConfProbBound
-	let indexNearestToMedian = findNearestValueIndex(0.5, cdfHist.map(([, value])=> value));
-
-	let medianVariable = cdfHist.map(([x, ])=> x)[indexNearestToMedian];
-
-	return medianVariable;
-}
-
 (async ()=>
 {
 	let numberTrials = 120000;
 
-	/*let alphaPrior = 3;
+	let alphaPrior = 3;
 	let betaPrior = 7;
 
 	let betaGeneratorA = betaGen.factory(36 + alphaPrior, 114 + betaPrior);
-	let betaGeneratorB = betaGen.factory(50 + alphaPrior, 100 + betaPrior);*/
-
-	let alphaPrior = 0.700102;
-	let betaPrior = 1;
-	let nA = 18325;
-	let nB = 18198;
-	let failuresA = 162
-	let failuresB = 8;
-
-	let betaGeneratorA = betaGen.factory(nA - failuresA + alphaPrior, failuresA + betaPrior);
-	let betaGeneratorB = betaGen.factory(nB - failuresB + alphaPrior, failuresB + betaPrior);
+	let betaGeneratorB = betaGen.factory(50 + alphaPrior, 100 + betaPrior);
 
 	let samplesA = [];
 	let samplesB = [];
@@ -173,10 +116,14 @@ function findMedianImprovement(cdfHist)
 	plot3.view();
 
 	//Confidence interval test
-	let inter = findConfidenceInterval(0.95, hist2);
+	let inter = TOOLS.findEstimatedCredibleInterval(0.95, hist2, "equalTailed");
 	console.log(inter);
 
-	//Median
-	let median = findMedianImprovement(hist2);
-	console.log("median", median);
+	//Expected value
+	let expectedValue = (50/(50+100)) / (36/(36+114));
+	console.log("Expected value", expectedValue);
+
+	let median = TOOLS.findMedianImprovement(hist2);
+	console.log("Median", median);
+
 })();
