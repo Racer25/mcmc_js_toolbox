@@ -28,8 +28,8 @@ function efficacy(probCovVaccine, probCovPlacebo)
 
 
 	//Posterior distribution generator (not scaled??)
-	let betaGeneratorPlacebo = betaGen.factory(covid19casesPlacebo + alphaPrior, nPlacebo + covid19casesPlacebo + betaPrior);
-	let betaGeneratorVaccine = betaGen.factory(covid19casesVaccine + alphaPrior, nVaccine + covid19casesVaccine + betaPrior);
+	let betaGeneratorPlacebo = betaGen.factory(covid19casesPlacebo + alphaPrior, nPlacebo - covid19casesPlacebo + betaPrior);
+	let betaGeneratorVaccine = betaGen.factory(covid19casesVaccine + alphaPrior, nVaccine - covid19casesVaccine + betaPrior);
 
 	/*
 	let testBetaBinPlacebo = betaBinomial.pdf(nPlacebo - covid19casesPlacebo, nPlacebo, alphaPrior, betaPrior);
@@ -37,7 +37,7 @@ function efficacy(probCovVaccine, probCovPlacebo)
 	console.log("testBetaBinPlacebo", testBetaBinPlacebo);
 	console.log("testBetaBinVaccine", testBetaBinVaccine);*/
 
-	let numberTrials = 1000000;
+	let numberTrials = 2000000;
 	let samplesPlacebo = [];
 	let samplesVaccine = [];
 
@@ -108,7 +108,7 @@ function efficacy(probCovVaccine, probCovPlacebo)
 	//Confidence interval test
 	try
 	{
-		let inter = TOOLS.findEstimatedCredibleInterval(0.95, histCDF, "HDI", 10000);
+		let inter = TOOLS.findEstimatedCredibleInterval(0.95, histCDF, "equalTailed", 10000);
 		console.log(inter);
 	}
 	catch(e)
@@ -120,8 +120,18 @@ function efficacy(probCovVaccine, probCovPlacebo)
 	let expectedValue = efficacy(covid19casesVaccine / nVaccine, covid19casesPlacebo / nPlacebo);
 	console.log("Expected value", expectedValue);
 
+	//New Expected value
+	let newExpectedValue = efficacy(
+		(covid19casesVaccine + alphaPrior) / (alphaPrior + nVaccine + betaPrior),
+		(covid19casesPlacebo + alphaPrior) / (alphaPrior + nPlacebo + betaPrior)
+	);
+	console.log("New Expected value", newExpectedValue);
+
 	let median = TOOLS.findMedianImprovement(histCDF);
 	console.log("Median", median);
+
+	let highestDensityBin = TOOLS.highestDensityBin(histPDF);
+	console.log("HDB", highestDensityBin);
 
 
 })();
