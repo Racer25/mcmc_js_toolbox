@@ -30,7 +30,7 @@ function adoptNewProb(currentParam, newParam, allAcceptedParams, indexIteration,
 	return newParam;
 }
 
-function computeLikelihoodUsingNewParamAndBinomialDist(param)
+function computeLikelihoodUsingBinomialDist(param)
 {
 	let n = 50;
 	let successes = 10;
@@ -128,14 +128,10 @@ function MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(computePrior, computeLikel
 	//Plot the analytic prior and posterior beta distributions
 	let X = TOOLS.generateArrayOfNumbers(0.0, 1.0, 10000);
 
-	//Define our prior believe giving the prior distribution density function (pdf)
-	let priorDistribution = new Beta(alphaPrior, betaPrior);
-	let likelihoodDistribution = new Binomial(n, 0.0);
-
 	//How many iterations of the Metropolis algorithm to carry out for MCMC
 	let iterations = 2e5;
 	let burnProportion = 0.05;
-	let samplesUnknownDistribution = MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(computePriorUsingBetaDist, computeLikelihoodUsingNewParamAndBinomialDist, updateParamAndProposalDistUsingNormalDist, iterations, burnProportion);
+	let samplesUnknownDistribution = MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(computePriorUsingBetaDist, computeLikelihoodUsingBinomialDist, updateParamAndProposalDistUsingNormalDist, iterations, burnProportion);
 
 	//Plot
 	let histPDFNodePlotLib = [
