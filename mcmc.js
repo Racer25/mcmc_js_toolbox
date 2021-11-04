@@ -1,26 +1,76 @@
 import * as TOOLS from "./tools";
-import Plot from "@stdlib/plot/ctor";
 import Beta from "@stdlib/stats/base/dists/beta/ctor";
 import Binomial from "@stdlib/stats/base/dists/binomial/ctor";
+import Normal from "@stdlib/stats/base/dists/normal/ctor";
 import uniformGen from "@stdlib/random/base/uniform";
 import normalGen from "@stdlib/random/base/normal";
+import { plot, stack, clear } from 'nodeplotlib';
 
-function quotientPosteriors(priorDistribution, likelihoodDistribution, currentParam, newParam, successes)
+function quotientPosteriors(computePrior, computeLikelihoodUsingNewParam, currentParam, newParam)
 {
-	likelihoodDistribution.p = currentParam;
-	let likelihoodCurrent = likelihoodDistribution.pmf(successes);
-	likelihoodDistribution.p = newParam;
-	let likelihoodNew = likelihoodDistribution.pmf(successes);
-
-	return (priorDistribution.pdf(newParam) * likelihoodNew) / (priorDistribution.pdf(currentParam) * likelihoodCurrent);
+	return  quotientPriors(computePrior, currentParam, newParam) * quotientLikelihood(computeLikelihoodUsingNewParam, currentParam, newParam) ;
 }
 
-function MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(priorDistribution, likelihoodDistribution, iterations, successes, hist, progressive, plotToUpdate)
+function quotientLikelihood(computeLikelihoodUsingNewParam, currentParam, newParam)
 {
+	return  computeLikelihoodUsingNewParam(newParam) / computeLikelihoodUsingNewParam(currentParam) ;
+}
+
+function quotientPriors(computePrior, currentParam, newParam)
+{
+	return  computePrior(newParam) / computePrior(currentParam);
+}
+
+function adoptNewProb(currentParam, newParam, allAcceptedParams, indexIteration, burnProportion, iterations)
+{
+	if(indexIteration > burnProportion * iterations)
+	{
+		allAcceptedParams.push(newParam);
+	}
+	return newParam;
+}
+
+function computeLikelihoodUsingNewParamAndBinomialDist(param)
+{
+	let n = 50;
+	let successes = 10;
+	return computePDFOrPMF( new Binomial(n, param), successes);
+}
+
+function computePriorUsingBetaDist(param)
+{
+	let alphaPrior = 12;
+	let betaPrior  = 12;
+	return computePDFOrPMF( new Beta(alphaPrior, betaPrior), param);
+}
+
+function updateParamAndProposalDistUsingNormalDist(currentParam)
+{
+	//Proposal distribution parameter
+	let ecartType = 0.1;
+
+	//Generate newParam
+	let normalDistGenerator = normalGen.factory(currentParam, ecartType);
+	let newParam = normalDistGenerator();
+
+	//Create proposal distribution for newParam
+	let normalDistNewParam = new Normal( newParam, ecartType );
+	return [newParam, normalDistNewParam];
+}
+
+function computePDFOrPMF(dist, value)
+{
+	return dist.pmf !== undefined ? dist.pmf(value) : dist.pdf(value);
+}
+
+function MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(computePrior, computeLikelihoodUsingNewParam, updateParamAndProposalDist, iterations, burnProportion)
+{
+	console.log("MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING...");
 	let uniformGenerator = uniformGen.factory(0.0, 1.0);
 
 	let currentParam;
 	let newParam;
+	let proposalDistribution;
 	let allAcceptedParams = [];
 
 	for(let i = 0; i < iterations; i++)
@@ -31,63 +81,45 @@ function MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(priorDistribution, likelih
 			currentParam = uniformGenerator();
 		}
 
-		//Generate newParam
-		let normalGenerator = normalGen.factory(currentParam, 0.01);
-		newParam = normalGenerator();
+		[newParam, proposalDistribution] = updateParamAndProposalDist(currentParam);
 
 		if(newParam >= 0.0 && newParam <= 1.0)
 		{
-			//Acceptance prob
-			let acceptanceProb = Math.min(quotientPosteriors(priorDistribution, likelihoodDistribution, currentParam, newParam, successes), 1.0);
+			//https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm#Step-by-step_instructions
+			let a1 = quotientPosteriors(computePrior, computeLikelihoodUsingNewParam, currentParam, newParam);
+			let a2 = computePDFOrPMF(proposalDistribution, newParam) / computePDFOrPMF(proposalDistribution, currentParam);
+			let a = a1 * a2;
 
-			//
-			let randNumber = uniformGenerator();
-			if(randNumber < acceptanceProb)
+			if(a >= 1)
 			{
-				//Adopt new prob
-				currentParam = newParam;
-				allAcceptedParams.push(newParam);
-				if(progressive && allAcceptedParams.length % 100 === 0)
+				//Adopt new prob with Burn in mecanism
+				currentParam = adoptNewProb(currentParam, newParam, allAcceptedParams, i, burnProportion, iterations);
+			}
+			else
+			{
+				//Prob a that the new value is chosen
+				let randNumber = uniformGenerator();
+				if(randNumber <= a)
 				{
-					//Update data and plot
-					hist = TOOLS.createHistFromData(allAcceptedParams, false, "density");
-					updatePlot(plotToUpdate, hist);
+					//Adopt new prob with Burn in mecanism
+					currentParam = adoptNewProb(currentParam, newParam, allAcceptedParams, i, burnProportion, iterations);
 				}
 			}
 		}
 	}
 
-	//Update data and plot
-	hist = TOOLS.createHistFromData(allAcceptedParams, false,"density");
-	updatePlot(plotToUpdate, hist);
-
-	//Burn in
-	//let burnProportion= 0.1;
-	//allAcceptedParams = allAcceptedParams.filter((val, index, arr) => index > arr.length * burnProportion);
-}
-
-function updatePlot(plot, hist)
-{
-	plot.x = [plot.x[0], plot.x[1], hist.map(([x, ]) => x)];
-	plot.y = [plot.y[0], plot.y[1], hist.map(([, density]) => density)];
-
-	plot.render();
-	plot.view();
+	console.log("MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING finished")
+	return allAcceptedParams;
 }
 
 //Main function in mcmc.js
 (async () =>
 {
-	//Parameter values for prior
+	//Parameter values for analytic prior
 	let n = 50;
 	let successes = 10;
 	let alphaPrior = 12;
 	let betaPrior  = 12;
-
-	/*let n = 18198;
-	let successes = n - 8;
-	let alphaPrior = 0.700102;
-	let betaPrior  = 1;*/
 
 	//Parameter values for analytic posterior
 	let alphaPost = successes + alphaPrior;
@@ -95,44 +127,46 @@ function updatePlot(plot, hist)
 
 	//Plot the analytic prior and posterior beta distributions
 	let X = TOOLS.generateArrayOfNumbers(0.0, 1.0, 10000);
-	let plot = new Plot(
-		{
-			x : [X, X, []],
-			y : [X.map(x => (new Beta(alphaPrior, betaPrior)).pdf(x)),
-				X.map(x => (new Beta(alphaPost, betaPost)).pdf(x)),
-				[]],
-			labels: ["Prior distribution", "Posterior distribution", "Estimated Posterior distribution"],
-			xLabel: "Theta (coin fairness)",
-			yLabel: "Density",
-			lineStyle: ["--", "-", "none"],
-			colors: ["blue", "green", "red"],
-			description: "The prior and posterior belief distributions about the fairness Theta.",
-			title: "The prior and posterior belief distributions about the fairness Theta.",
-			symbols: ["none", "none", "closed-circle"],
-			width: 1000,
-			height: 562,
-			xNumTicks: 10,
-			yNumTicks: 10,
-			renderFormat: "vdom",
-			viewer: "browser",
-			autoRender: false,
-			autoView: false
-		});
-	plot.render();
-	plot.view();
-
 
 	//Define our prior believe giving the prior distribution density function (pdf)
 	let priorDistribution = new Beta(alphaPrior, betaPrior);
 	let likelihoodDistribution = new Binomial(n, 0.0);
+
 	//How many iterations of the Metropolis algorithm to carry out for MCMC
-	let iterations = 100000;
-	let progressive = false;
-	let hist = [];
-	MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(priorDistribution, likelihoodDistribution, iterations, successes, hist, progressive, plot);
+	let iterations = 2e5;
+	let burnProportion = 0.05;
+	let samplesUnknownDistribution = MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(computePriorUsingBetaDist, computeLikelihoodUsingNewParamAndBinomialDist, updateParamAndProposalDistUsingNormalDist, iterations, burnProportion);
 
-
-	//View the plot in browser
-	//plot.view("browser");
+	//Plot
+	let histPDFNodePlotLib = [
+		[
+			{
+				x: X,
+				y: X.map(x => new Beta(alphaPrior, betaPrior).pdf(x)),
+				name: "Prior",
+				type: "line",
+			},
+			{
+				x: X,
+				y: X.map(x => new Beta(alphaPost, betaPost).pdf(x)),
+				name: "Posterior",
+				type: "line",
+			},
+			{
+				x: samplesUnknownDistribution,
+				name: "Probability",
+				type: "histogram",
+				histnorm: 'probability density',
+			}
+			],
+		{
+			title: `PDF of UnknownDistribution`,
+			showlegend: true,
+			xaxis:{title: "Prob"}
+		}
+	];
+	stack(...histPDFNodePlotLib);
+	plot();
+	clear();
 
 })();

@@ -1,6 +1,6 @@
-import betaGen from "@stdlib/random/base/beta";
+import betaSampler from "@stdlib/random/base/beta";
 import * as TOOLS from "./tools";
-import Plot from "@stdlib/plot/ctor";
+import { plot, stack, clear } from 'nodeplotlib';
 
 function efficacy(probCovVaccine, probCovPlacebo)
 {
@@ -28,16 +28,10 @@ function efficacy(probCovVaccine, probCovPlacebo)
 
 
 	//Posterior distribution generator (not scaled??)
-	let betaGeneratorPlacebo = betaGen.factory(covid19casesPlacebo + alphaPrior, nPlacebo - covid19casesPlacebo + betaPrior);
-	let betaGeneratorVaccine = betaGen.factory(covid19casesVaccine + alphaPrior, nVaccine - covid19casesVaccine + betaPrior);
+	let betaGeneratorPlacebo = betaSampler.factory(covid19casesPlacebo + alphaPrior, nPlacebo - covid19casesPlacebo + betaPrior);
+	let betaGeneratorVaccine = betaSampler.factory(covid19casesVaccine + alphaPrior, nVaccine - covid19casesVaccine + betaPrior);
 
-	/*
-	let testBetaBinPlacebo = betaBinomial.pdf(nPlacebo - covid19casesPlacebo, nPlacebo, alphaPrior, betaPrior);
-	let testBetaBinVaccine= betaBinomial.pdf(nVaccine - covid19casesVaccine, nVaccine, alphaPrior, betaPrior);
-	console.log("testBetaBinPlacebo", testBetaBinPlacebo);
-	console.log("testBetaBinVaccine", testBetaBinVaccine);*/
-
-	let numberTrials = 2000000;
+	let numberTrials = 100_000;
 	let samplesPlacebo = [];
 	let samplesVaccine = [];
 
@@ -51,59 +45,42 @@ function efficacy(probCovVaccine, probCovPlacebo)
 	//Compute efficacy
 	let samplesEfficacy = samplesPlacebo.map((samplePlacebo, index) => efficacy(samplesVaccine[index], samplePlacebo));
 
+	//Plots
+	let histPDFNodePlotLib = [
+		[
+		{
+			x: samplesEfficacy,
+			name: "Efficacy of vaccine",
+			type: "histogram",
+			histnorm: 'probability density',
+		}],
+		{
+			title: `PDF of vaccine efficacy`,
+			showlegend: true,
+			xaxis:{title: "Vaccine efficacy"}
+		}
+		];
+	let histCDFNodePlotLib = [
+		[
+		{
+			x: samplesEfficacy,
+			name: "Efficacy of vaccine",
+			type: "histogram",
+			cumulative: {enabled: true},
+			histnorm: 'probability density',
+		}],
+		{
+			title: `CDF of vaccine efficacy`,
+			showlegend: true,
+			xaxis:{title: "Vaccine efficacy"}
+		}
+		];
+	stack(...histPDFNodePlotLib);
+	stack(...histCDFNodePlotLib);
+	plot();
+
 	let histPDF = TOOLS.createHistFromData(samplesEfficacy, false, "classic");
-
-	//View histogram 1
-	let plotPDF = new Plot(
-		{
-			x : [histPDF.map(([x,])=> x)],
-			y : [histPDF.map(([, value])=> value)],
-			labels: ["Vaccine Efficacy Distribution"],
-			xLabel: "efficacy",
-			yLabel: "Density",
-			lineStyle: ["none"],
-			colors: ["blue"],
-			description: "This histogram describes the vaccine efficacy PDF",
-			title: "This histogram describes the vaccine efficacy PDF",
-			symbols: ["closed-circle"],
-			width: 1000,
-			height: 562,
-			xNumTicks: 10,
-			yNumTicks: 10,
-			renderFormat: "vdom",
-			viewer: "browser",
-			autoRender: false,
-			autoView: false
-		});
-	plotPDF.render();
-	plotPDF.view();
-
 	let histCDF = TOOLS.createHistFromData(samplesEfficacy, true, "classic");
-
-	//View histogram 1
-	let plotCDF = new Plot(
-		{
-			x : [histCDF.map(([x,])=> x)],
-			y : [histCDF.map(([, value])=> value)],
-			labels: ["Vaccine efficacy Cumulative Distribution"],
-			xLabel: "efficacy",
-			yLabel: "Density",
-			lineStyle: ["none"],
-			colors: ["blue"],
-			description: "This histogram describes the vaccine efficacy CDF",
-			title: "This histogram describes the vaccine efficacy CDF",
-			symbols: ["closed-circle"],
-			width: 1000,
-			height: 562,
-			xNumTicks: 10,
-			yNumTicks: 10,
-			renderFormat: "vdom",
-			viewer: "browser",
-			autoRender: false,
-			autoView: false
-		});
-	plotCDF.render();
-	plotCDF.view();
 
 	//Confidence interval test
 	try

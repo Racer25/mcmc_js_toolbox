@@ -1,6 +1,7 @@
 import betaGen from "@stdlib/random/base/beta";
 import * as TOOLS from "./tools";
 import Plot from "@stdlib/plot/ctor";
+import { plot, stack, clear } from 'nodeplotlib';
 
 (async ()=>
 {
@@ -36,6 +37,38 @@ import Plot from "@stdlib/plot/ctor";
 
 	//Compute Ratio B/A
 	let ratiosBonA = samplesB.map((sampleB, index) => sampleB / samplesA[index]);
+	let sumRatiosBonA = ratiosBonA.reduce((acc, curr) => acc + curr, 0);
+
+	stack([
+			{
+				x: ratiosBonA,
+				name: "Ratio B/A",
+				type: "histogram",
+				histnorm: 'probability density',
+			}],
+		{
+			title: `PDF of Ratio B/A`,
+			showlegend: true,
+			xaxis:{title: "Ratio B/A"}
+		}
+	);
+
+	stack([
+			{
+				x: ratiosBonA,
+				name: "Ratio B/A",
+				type: "histogram",
+				histnorm: 'probability density',
+				cumulative: {enabled: true}
+			}],
+		{
+			title: `CDF of Ratio B/A`,
+			showlegend: true,
+			xaxis:{title: "Ratio B/A"}
+		}
+	);
+
+	plot();
 
 	let hist1 = TOOLS.createHistFromData(ratiosBonA, false, "none");
 
@@ -116,7 +149,7 @@ import Plot from "@stdlib/plot/ctor";
 	plot3.view();
 
 	//Confidence interval test
-	let inter = TOOLS.findEstimatedCredibleInterval(0.95, hist2, "equalTailed");
+	let inter = TOOLS.findEstimatedCredibleInterval(0.95, hist2, "HDI", 100000);
 	console.log(inter);
 
 	//Expected value
