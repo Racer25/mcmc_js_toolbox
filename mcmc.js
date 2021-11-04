@@ -11,9 +11,9 @@ function quotientPosteriors(computePrior, computeLikelihoodUsingNewParam, curren
 	return  quotientPriors(computePrior, currentParam, newParam) * quotientLikelihood(computeLikelihoodUsingNewParam, currentParam, newParam) ;
 }
 
-function quotientLikelihood(computeLikelihoodUsingNewParam, currentParam, newParam)
+function quotientLikelihood(computeLikelihood, currentParam, newParam)
 {
-	return  computeLikelihoodUsingNewParam(newParam) / computeLikelihoodUsingNewParam(currentParam) ;
+	return  computeLikelihood(newParam) / computeLikelihood(currentParam) ;
 }
 
 function quotientPriors(computePrior, currentParam, newParam)
@@ -44,13 +44,13 @@ function computePriorUsingBetaDist(param)
 	return computePDFOrPMF( new Beta(alphaPrior, betaPrior), param);
 }
 
-function updateParamAndProposalDistUsingNormalDist(currentParam)
+function updateParamAndProposalDistUsingNormalDist(param)
 {
 	//Proposal distribution parameter
 	let ecartType = 0.1;
 
 	//Generate newParam
-	let normalDistGenerator = normalGen.factory(currentParam, ecartType);
+	let normalDistGenerator = normalGen.factory(param, ecartType);
 	let newParam = normalDistGenerator();
 
 	//Create proposal distribution for newParam
@@ -63,7 +63,7 @@ function computePDFOrPMF(dist, value)
 	return dist.pmf !== undefined ? dist.pmf(value) : dist.pdf(value);
 }
 
-function MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(computePrior, computeLikelihoodUsingNewParam, updateParamAndProposalDist, iterations, burnProportion)
+function MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(computePrior, computeLikelihood, updateParamAndProposalDist, iterations, burnProportion)
 {
 	console.log("MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING...");
 	let uniformGenerator = uniformGen.factory(0.0, 1.0);
@@ -86,7 +86,7 @@ function MCMC_POSTERIOR_ESTIMATION_METROPOLIS_HASTING(computePrior, computeLikel
 		if(newParam >= 0.0 && newParam <= 1.0)
 		{
 			//https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm#Step-by-step_instructions
-			let a1 = quotientPosteriors(computePrior, computeLikelihoodUsingNewParam, currentParam, newParam);
+			let a1 = quotientPosteriors(computePrior, computeLikelihood, currentParam, newParam);
 			let a2 = computePDFOrPMF(proposalDistribution, newParam) / computePDFOrPMF(proposalDistribution, currentParam);
 			let a = a1 * a2;
 
