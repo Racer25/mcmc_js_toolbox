@@ -8,6 +8,7 @@
     "abTesting": "node -r esm abTesting.js",
     "vaccineEfficiency": "node -r esm vaccineEfficiency.js",
     "testBayesJS": "node -r esm testBayesJS.js",
+    "diceChecker": "node -r esm diceChecker/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

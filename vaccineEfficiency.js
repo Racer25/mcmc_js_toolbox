@@ -31,7 +31,7 @@ function efficacy(probCovVaccine, probCovPlacebo)
 	let betaGeneratorPlacebo = betaSampler.factory(covid19casesPlacebo + alphaPrior, nPlacebo - covid19casesPlacebo + betaPrior);
 	let betaGeneratorVaccine = betaSampler.factory(covid19casesVaccine + alphaPrior, nVaccine - covid19casesVaccine + betaPrior);
 
-	let numberTrials = 100_000;
+	let numberTrials = 2e6;
 	let samplesPlacebo = [];
 	let samplesVaccine = [];
 
